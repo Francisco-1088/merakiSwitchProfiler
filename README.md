@@ -63,6 +63,8 @@ Pass
 6. Tag these same switches with one additonal tag that has the exact same name as the switch port profile you want to deploy on this switch from your source template. For example, if you want to copy the switch port configs on a MS410-16 profile named `ms410-16-t1`, you must tag a corresponding MS410-16 switch with the tag `ms410-16-t1`.
 
 ![image alt text](images/switch_tags.png)
+![image alt text](images/port_profiles.png)
+The tagged switches in the picture will receive the configurations of the profiles `ms425-32-t1` and `ms350-48lp-t1`, as their tags and models match these profile names. They also carry the `switchProfiler` tag that enables operations on them.
 
 NOTE: Port configs will only be applied to switches that meet the following conditions:
 * The network the switch belongs to must have the tag specified in #4
