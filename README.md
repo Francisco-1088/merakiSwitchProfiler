@@ -18,7 +18,17 @@ Copy switchport profiles and settings like QoS, ACLs, SNMP and Syslog from a sou
 
 # Introduction
 
-Pass
+Cisco Meraki Configuration Templates and Switch Profiles allow organizations to manage large numbers of switches distributed across many locations in a simplified manner, centralizing configurations in one point. However, they also introduce a number of limitations:
+1. All sites bound to the template must conform to a single firmware version, and must be upgraded together
+2. It removes the option of using Staged Upgrades, forcing all upgrades within a site to happen concurrently
+3. It forces all template-bound networks to conform not only to the same Switch Profiles, but also to the same Group Policies, QoS settings, ACL rules and other network-wide settings
+4. It limits local divergences in switch port configurations, as any changes to the switch profiles will be pushed out to all bound switches
+
+This tool allows decoupling of firmware upgrades and network settings from switch port configurations, and offers additional flexibility in deploying port configuration changes, like defining ports to be ignored during configuration pushes, and only pushing changes to a subset of your switches. All of this is achieved via Tags:
+
+* Network Tags identify networks the tool will operate on and copy Network-wide configurations to (Group Policies, QoS, ACLs, Alerts, Syslog, SNMP, Traffic Analytics)
+* Switch Tags identify switches within these networks that will have their ports synced to profiles that carry the same name as the tag (including associated Access Policies and Port Schedules)
+* Ignore Port Tags identify ports that should not be updated by the script, even if the script is operating on other ports in the same switch. This allows preservation of local overrides and protecting critical ports like uplinks and server ports
 
 <a name="prereq"/>
 
