@@ -26,9 +26,13 @@ Cisco Meraki Configuration Templates and Switch Profiles allow organizations to 
 
 This tool allows decoupling of firmware upgrades and network settings from switch port configurations, and offers additional flexibility in deploying port configuration changes, like defining ports to be ignored during configuration pushes, and only pushing changes to a subset of your switches. All of this is achieved via Tags:
 
-* Network Tags identify networks the tool will operate on and copy Network-wide configurations to (Group Policies, QoS, ACLs, Alerts, Syslog, SNMP, Traffic Analytics)
-* Switch Tags identify switches within these networks that will have their ports synced to profiles that carry the same name as the tag (including associated Access Policies and Port Schedules)
-* Ignore Port Tags identify ports that should not be updated by the script, even if the script is operating on other ports in the same switch. This allows preservation of local overrides and protecting critical ports like uplinks and server ports
+* **Network Tags** identify networks the tool will operate on and copy Network-wide configurations to (Group Policies, QoS, ACLs, Alerts, Syslog, SNMP, Traffic Analytics)
+* **Switch Tags** identify switches within these networks that will have their ports synced to profiles that carry the same name as the tag (including associated Access Policies and Port Schedules)
+* **Ignore Port Tags** identify ports that should not be updated by the script, even if the script is operating on other ports in the same switch. This allows preservation of local overrides and protecting critical ports like uplinks and server ports
+
+The script also has the added flexibility of allowing you to reference a configuration template as a source that resides in a different organization than the one where your switches currently exist on, permitting syncing configurations across organizations. It also allows the definition of a template for switch port profiles, and a separate different template for Network settings, decoupling port-level configurations from ACLs, QoS, Alerting and other settings for added flexibility.
+
+All of this is done without ever binding switches to configuration templates, which allows you to keep completely separate firmware upgrade procedures across networks, and keeping advanced functionalities like Staged Upgrades available.
 
 <a name="prereq"/>
 
