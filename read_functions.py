@@ -1,6 +1,77 @@
+import asyncio
 import config
 import pandas as pd
 from tabulate import tabulate
+
+async def get_network_switch_access_policies(aiomeraki, net_id):
+    results = await aiomeraki.switch.getNetworkSwitchAccessPolicies(net_id)
+    return net_id, "access_policies", results
+
+async def get_network_switch_port_schedules(aiomeraki, net_id):
+    results = await aiomeraki.switch.getNetworkSwitchPortSchedules(net_id)
+    return net_id, "port_schedules", results
+
+async def get_network_group_policies(aiomeraki, net_id):
+    results = await aiomeraki.networks.getNetworkGroupPolicies(net_id)
+    return net_id, "group_policies", results
+
+async def get_network_syslog(aiomeraki, net_id):
+    results = await aiomeraki.networks.getNetworkSyslogServers(net_id)
+    return net_id, "syslog", results
+
+async def get_network_snmp(aiomeraki, net_id):
+    results = await aiomeraki.networks.getNetworkSnmp(net_id)
+    return net_id, "snmp", results
+
+async def get_network_alerts(aiomeraki, net_id):
+    results = await aiomeraki.networks.getNetworkAlertsSettings(net_id)
+    return net_id, "net_alerts", results
+
+async def get_network_analytics(aiomeraki, net_id):
+    results = await aiomeraki.networks.getNetworkTrafficAnalysis(net_id)
+    return net_id, "net_analytics", results
+
+async def get_network_switch_qos_rules(aiomeraki, net_id):
+    results = await aiomeraki.switch.getNetworkSwitchQosRules(net_id)
+    return net_id, "qos_rules", results
+
+async def get_network_switch_qos_rules_order(aiomeraki, net_id):
+    results = await aiomeraki.switch.getNetworkSwitchQosRulesOrder(net_id)
+    return net_id, "qos_rules_order", results
+
+async def get_network_switch_acl(aiomeraki, net_id):
+    results = await aiomeraki.switch.getNetworkSwitchAccessControlLists(net_id)
+    return net_id, "acl", results
+
+async def get_org_config_template_switch_profile_ports(aiomeraki, src_org_id, src_template_id, profile):
+    results = await aiomeraki.switch.getOrganizationConfigTemplateSwitchProfilePorts(  #### --> Async!!!!
+        organizationId=config.src_org_id,
+        configTemplateId=config.src_template_id,
+        profileId=profile['switchProfileId'])
+    return profile, results
+
+async def get_everything(aiomeraki, target_networks):
+    net_attributes = {}
+    get_tasks = []
+    for network in target_networks:
+        get_tasks.append(get_network_switch_access_policies(aiomeraki, network['id']))
+        get_tasks.append(get_network_switch_port_schedules(aiomeraki, network['id']))
+        get_tasks.append(get_network_group_policies(aiomeraki, network['id']))
+        get_tasks.append(get_network_snmp(aiomeraki, network['id']))
+        get_tasks.append(get_network_syslog(aiomeraki, network['id']))
+        get_tasks.append(get_network_alerts(aiomeraki, network['id']))
+        get_tasks.append(get_network_analytics(aiomeraki, network['id']))
+        get_tasks.append(get_network_switch_qos_rules(aiomeraki, network['id']))
+        get_tasks.append(get_network_switch_qos_rules_order(aiomeraki, network['id']))
+        get_tasks.append(get_network_switch_acl(aiomeraki, network['id']))
+
+    for task in asyncio.as_completed(get_tasks):
+        net_id, action, result = await task
+        if net_id not in net_attributes.keys():
+            net_attributes[net_id] = {}
+        net_attributes[net_id][action] = result
+
+    return net_attributes
 
 async def gather_switch_specific_data(aiomeraki):
     """
@@ -25,21 +96,32 @@ async def gather_switch_specific_data(aiomeraki):
              update in each one.
     """
     # Get list of MS devices in the organization with the tag specified in config.dst_switch_tag
-    org_devices = await aiomeraki.organizations.getOrganizationDevices(
+    org_devices = await aiomeraki.organizations.getOrganizationDevices( #### --> Independent
         organizationId=config.src_org_id,
         tags=[config.dst_switch_tag],
         model='MS',
         total_pages=-1
     )
-    # Obtain set of networks those MS devices are mapped to
-    device_nets = [*set(d['networkId'] for d in org_devices)]
 
     # Obtain list of networks in the organization with the config.dst_network_tag
-    org_networks = await aiomeraki.organizations.getOrganizationNetworks(
+    org_networks = await aiomeraki.organizations.getOrganizationNetworks( #### --> Independent
         organizationId=config.src_org_id,
         tags=[config.dst_network_tag],
         total_pages=-1
     )
+
+    # Obtain list of Access Policies in source template
+    temp_access_policies = await aiomeraki.switch.getNetworkSwitchAccessPolicies( #### --> Independent
+        networkId=config.src_template_id
+    )
+
+    # Obtain list of Port Schedules in source template
+    temp_port_schedules = await aiomeraki.switch.getNetworkSwitchPortSchedules( #### --> Independent
+        networkId=config.src_template_id
+    )
+
+    # Obtain set of networks those MS devices are mapped to
+    device_nets = [*set(d['networkId'] for d in org_devices)]
 
     # Construct a set of the network IDs of said networks
     tagged_nets = [*set(net['id'] for net in org_networks)]
@@ -67,24 +149,29 @@ async def gather_switch_specific_data(aiomeraki):
     # Obtain list of ports on each profile, and construct a dictionary with keys for each switch profile, containing
     # ports and model subkeys for each profile
     temp_switch_profile_ports_dict = {}
+    get_tasks = []
     for profile in temp_switch_profiles:
+        get_tasks.append(get_org_config_template_switch_profile_ports(
+            aiomeraki=aiomeraki,
+            src_org_id=config.src_org_id,
+            src_template_id=config.src_template_id,
+            profile=profile)
+        )
+
+    for task in asyncio.as_completed(get_tasks):
+        profile, results = await task
+        if profile["name"] not in temp_switch_profile_ports_dict.keys():
+            temp_switch_profile_ports_dict[profile["name"]]={}
         temp_switch_profile_ports_dict[profile['name']]={
-            'ports': await aiomeraki.switch.getOrganizationConfigTemplateSwitchProfilePorts(
-                organizationId=config.src_org_id,
-                configTemplateId=config.src_template_id,
-                profileId=profile['switchProfileId']),
-            'model': profile['model']
+            "ports": results,
+            "model": profile['model']
         }
+
     if config.verbose==True:
         print("Port profiles in source template:")
         for key in temp_switch_profile_ports_dict.keys():
             print(f"Port Profile {key}")
             print(tabulate(pd.DataFrame(temp_switch_profile_ports_dict[key]["ports"]), headers='keys', tablefmt='fancy_grid'))
-
-    # Obtain list of Access Policies in source template
-    temp_access_policies = await aiomeraki.switch.getNetworkSwitchAccessPolicies(
-        networkId=config.src_template_id
-    )
 
     # Since RADIUS secrets are not returned by the API, request user input to fill these in
     for ap in temp_access_policies:
@@ -97,10 +184,6 @@ async def gather_switch_specific_data(aiomeraki):
                 radius_secret = input(f"Please input your desired Accounting RADIUS secret for Access Policy {ap['name']} and accounting server {server['host']}: ")
                 server['secret'] = radius_secret
 
-    # Obtain list of Port Schedules in source template
-    temp_port_schedules = await aiomeraki.switch.getNetworkSwitchPortSchedules(
-        networkId=config.src_template_id
-    )
     if config.verbose == True:
         print("Access Policies in Source Template:")
         print(tabulate(pd.DataFrame(temp_access_policies), headers='keys', tablefmt='fancy_grid'))
@@ -120,49 +203,7 @@ async def gather_switch_specific_data(aiomeraki):
                         port['accessPolicyNumber'] = ap['name']
 
     # Build dictionary with target networks as keys, and access policies and port schedules as subkeys
-    net_attributes = {}
-    for net in target_networks:
-        net_attributes[f'{net["id"]}']={}
-        net_attributes[f'{net["id"]}']['access_policies']= await aiomeraki.switch.getNetworkSwitchAccessPolicies(
-            networkId=net['id']
-        )
-        net_attributes[f'{net["id"]}']['port_schedules'] = await aiomeraki.switch.getNetworkSwitchPortSchedules(
-            networkId=net['id']
-        )
-        # Add GPs
-        net_attributes[f'{net["id"]}']["group_policies"] = await aiomeraki.networks.getNetworkGroupPolicies(
-            networkId=net['id']
-        )
-        # Add QoS
-        net_attributes[f'{net["id"]}']["qos_rules"] = await aiomeraki.switch.getNetworkSwitchQosRules(
-            networkId=net['id']
-        )
-        net_attributes[f'{net["id"]}']["qos_rules_order"] = await aiomeraki.switch.getNetworkSwitchQosRulesOrder(
-            networkId=net['id']
-        )
-        # Add Net Alerts
-        net_attributes[f'{net["id"]}']["net_alerts"] = await aiomeraki.networks.getNetworkAlertsSettings(
-            networkId=net['id']
-        )
-        # Add Syslog
-        net_attributes[f'{net["id"]}']['syslog'] = await aiomeraki.networks.getNetworkSyslogServers(
-            networkId=net["id"]
-        )
-        # Add ACL
-        net_attributes[f'{net["id"]}']['acl'] = await aiomeraki.switch.getNetworkSwitchAccessControlLists(
-            networkId=net['id']
-        )
-
-        # Add SNMP
-        net_attributes[f'{net["id"]}']['snmp'] = await aiomeraki.networks.getNetworkSnmp(
-            networkId=net["id"]
-        )
-
-        # Add Net Analytics
-        net_attributes[f'{net["id"]}']['net_analytics'] = await aiomeraki.networks.getNetworkTrafficAnalysis(
-            networkId=net["id"]
-        )
-
+    net_attributes = await get_everything(aiomeraki, target_networks)
 
     if config.verbose == True:
         for key in net_attributes.keys():
@@ -172,7 +213,7 @@ async def gather_switch_specific_data(aiomeraki):
             print(tabulate(pd.DataFrame(net_attributes[key]['port_schedules']), headers='keys', tablefmt='fancy_grid'))
 
     # Obtain list of all target switches in the organization along with their lists of ports
-    target_switch_ports = await aiomeraki.switch.getOrganizationSwitchPortsBySwitch(
+    target_switch_ports = await aiomeraki.switch.getOrganizationSwitchPortsBySwitch( #### --> Depends on 116
         organizationId=config.dst_org_id,
         serials=target_device_serials,
         total_pages=-1
@@ -202,43 +243,37 @@ async def gather_network_data(aiomeraki):
               src_snmp_config: SNMP Config in source template
               src_net_analytics: Network Analytics Config in source template
     """
-    # Obtain ACLs in source template
-    src_acl_config = await aiomeraki.switch.getNetworkSwitchAccessControlLists(
-        networkId=config.network_src_template_id
-    )
+    
 
-    # Obtain QoS Configs in source template
-    src_qos_config = await aiomeraki.switch.getNetworkSwitchQosRules(
-        networkId=config.network_src_template_id
-    )
-    src_qos_order_config = await aiomeraki.switch.getNetworkSwitchQosRulesOrder(
-        networkId=config.network_src_template_id
-    )
+    get_tasks = [
+        get_network_group_policies(aiomeraki, config.network_src_template_id),
+        get_network_snmp(aiomeraki, config.network_src_template_id),
+        get_network_syslog(aiomeraki, config.network_src_template_id),
+        get_network_alerts(aiomeraki, config.network_src_template_id),
+        get_network_analytics(aiomeraki, config.network_src_template_id),
+        get_network_switch_qos_rules(aiomeraki, config.network_src_template_id),
+        get_network_switch_qos_rules_order(aiomeraki, config.network_src_template_id),
+        get_network_switch_acl(aiomeraki, config.network_src_template_id)
+    ]
 
-    # Obtain Group Policies in source template
-    src_group_policies = await aiomeraki.networks.getNetworkGroupPolicies(
-        networkId=config.network_src_template_id
-    )
-
-    # Obtain Network Alerts in source template
-    src_network_alerts = await aiomeraki.networks.getNetworkAlertsSettings(
-        networkId=config.network_src_template_id
-    )
-
-    # Obtain Syslog Configs in source template
-    src_syslog_config = await aiomeraki.networks.getNetworkSyslogServers(
-        networkId=config.network_src_template_id
-    )
-
-    # Obtain SNMP Configs in source template
-    src_snmp_config = await aiomeraki.networks.getNetworkSnmp(
-        networkId=config.network_src_template_id
-    )
-
-    # Obtain Analytics configs in source template
-    src_net_analytics = await aiomeraki.networks.getNetworkTrafficAnalysis(
-        networkId=config.network_src_template_id
-    )
+    for task in asyncio.as_completed(get_tasks):
+        net_id, action, result = await task
+        if action=='acl':
+            src_acl_config = result
+        elif action=='qos_rules':
+            src_qos_config = result
+        elif action=='qos_rules_order':
+            src_qos_order_config = result
+        elif action=='group_policies':
+            src_group_policies = result
+        elif action=='net_alerts':
+            src_network_alerts = result
+        elif action=='syslog':
+            src_syslog_config = result
+        elif action=='snmp':
+            src_snmp_config = result
+        elif action=='net_analytics':
+            src_net_analytics = result
 
     if config.verbose==True:
         print("Source Template ACL Rules:")
