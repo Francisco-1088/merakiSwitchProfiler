@@ -34,7 +34,7 @@ The script also has the added flexibility of allowing you to reference a configu
 
 All of this is done without ever binding switches to configuration templates, which allows you to keep completely separate firmware upgrade procedures across networks, and keeping advanced functionalities like Staged Upgrades available.
 
-<a name="prereq"/>
+<a id="prereq"></a>
 
 ## Prerequisites
 
@@ -47,7 +47,7 @@ All of this is done without ever binding switches to configuration templates, wh
 7. Set up [Group Policies](https://documentation.meraki.com/MS/Access_Control/Meraki_MS_Group_Policy_Access_Control_Lists), [QoS](https://documentation.meraki.com/MS/Other_Topics/QoS_(Quality_of_Service)), [ACLs](https://documentation.meraki.com/MS/Layer_3_Switching/Configuring_ACLs), [Alerts](https://documentation.meraki.com/General_Administration/Cross-Platform_Content/Alerts_and_Notifications), [SNMP](https://documentation.meraki.com/General_Administration/Monitoring_and_Reporting/SNMP_Overview_and_Configuration), [Syslog](https://documentation.meraki.com/General_Administration/Monitoring_and_Reporting/Syslog_Server_Overview_and_Configuration), [Access Policies](https://documentation.meraki.com/MS/Access_Control/MS_Switch_Access_Policies_(802.1X)) and [Port Schedules](https://documentation.meraki.com/MS/Access_Control/Port_Schedules) in source templates.
 8. Deploy additional standalone networks with switches in them
 
-<a name="howtouse"/>
+<a id="howtouse"></a>
 
 ## How to Use
 
@@ -95,7 +95,7 @@ NOTE: Port configs will only be applied to switches that meet the following cond
 
 **Note:** If using the `supervised=True` configuration in the `config.py` file, every time the script will apply configuration changes it will prompt you to accept whether you want to continue or not. The prompt ONLY accepts `Y` for continuing, or `N` for skipping, and it is cap-sensitive. Any other input will break execution. A `N` will return execution to the script before calling the function with the exception of Access Policies and Port Schedules. If you choose to skip either of these, the script will also break execution, as not creating these will cause problems when attempting to update Switch Port configurations.
 
-<a name="caveats"/>
+<a name="caveats"></a>
 
 ## Caveats
 
