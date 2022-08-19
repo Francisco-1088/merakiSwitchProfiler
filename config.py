@@ -26,3 +26,4 @@ ignore_port_tag = 'ignore'
 verbose = True # Will display information gathered about networks
 supervised = True # Will ask for confirmation before applying any configuration changes
 console_logging = True # Will print API output to the console
+max_retries = 1000 # For large deployments it's best to keep this number high to work around 429 errors
