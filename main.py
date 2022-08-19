@@ -10,7 +10,8 @@ aiomeraki = meraki.aio.AsyncDashboardAPI(
             config.api_key,
             base_url="https://api.meraki.com/api/v1",
             log_file_prefix=__file__[:-3],
-            print_console=False,)
+            print_console=False,
+            maximum_retries=config.max_retries,)
 
 # Instantiate synchronous Meraki API client
 dashboard = meraki.DashboardAPI(
