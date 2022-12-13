@@ -76,7 +76,8 @@ All of this is done without ever binding switches to configuration templates, wh
 ![image alt text](images/network_tags.png)
 
 5. [Tag switches](https://documentation.meraki.com/General_Administration/Organizations_and_Networks/Organization_Menu/Manage_Tags#Creating_Device_tags) you want to copy switch port profiles to with the same tag you defined in `config.py` under `dst_switch_tag`
-6. Tag these same switches with one additonal tag that has the exact same name as the switch port profile you want to deploy on this switch from your source template. For example, if you want to copy the switch port configs on a MS410-16 profile named `ms410-16-t1`, you must tag a corresponding MS410-16 switch with the tag `ms410-16-t1`.
+6. OPTIONAL: You may use the provided `switchTagger.py` and `switches.csv` files to automatically tag your switches. You have to modify the sample CSV with your own switch serials and the tags you wish to assign to them separated by commas as a string. You then execute this script with `python switchTagger.py`
+7. Tag these same switches with one additonal tag that has the exact same name as the switch port profile you want to deploy on this switch from your source template. For example, if you want to copy the switch port configs on a MS410-16 profile named `ms410-16-t1`, you must tag a corresponding MS410-16 switch with the tag `ms410-16-t1`.
 
 ![image alt text](images/switch_tags.png)
 ![image alt text](images/port_profiles.png)
@@ -87,11 +88,11 @@ NOTE: Port configs will only be applied to switches that meet the following cond
 * The switch must have the tag specified in #5
 * The switch must have a tag that matches the exact name as a switch port profile in the source template
 * The switch's model must match the model specified in the creation of the switch port profile, i.e. you cannot read a profile for an MS390-24UX and apply it to an MS350-48FP
-7. OPTIONAL: If there are any switch ports that you want to ignore or not update (for example uplinks), make sure to [tag them](https://documentation.meraki.com/MS/Port_and_VLAN_Configuration/Switch_Ports#Port_configuration) with a switch port tag matching the one you specified in `config.py` under `ignore_port_tag`
+8. OPTIONAL: If there are any switch ports that you want to ignore or not update (for example uplinks), make sure to [tag them](https://documentation.meraki.com/MS/Port_and_VLAN_Configuration/Switch_Ports#Port_configuration) with a switch port tag matching the one you specified in `config.py` under `ignore_port_tag`
 
 ![image alt text](images/ignore_port_tags.png)
 
-8. Run the script with `python main.py`
+9. Run the script with `python main.py`
 
 **Note:** If any of your Access Policies contain RADIUS configurations, you will be prompted to manually enter the RADIUS secret for each of the participating servers, as these cannot be obtained via the API.
 
